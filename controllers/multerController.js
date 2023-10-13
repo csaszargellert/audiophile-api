@@ -12,6 +12,7 @@ const storage = multer.diskStorage({
     const { category, name } = req.body;
 
     const directory = constructDirectoryPath(name, category);
+    console.log(directory);
     if (!directoryExists(directory)) {
       await makeDirectory(directory);
     }
