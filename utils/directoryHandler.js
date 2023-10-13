@@ -10,10 +10,7 @@ const constructDirectoryPath = function (name, category) {
   const serializedName = serializeDirectoryName(name);
 
   return path.join(
-    __dirname,
-    "..",
-    "..",
-    "client",
+    "https://gellert-audiophile.netlify.app",
     "public",
     "assets",
     `product-${serializedName}-${category}`
