@@ -6,6 +6,7 @@ const createStripeSession = catchAsync(async function (req, res, next) {
   const { products } = req.body;
 
   const line_items_products = products.map((product) => {
+    console.log(product.price);
     return {
       price_data: {
         product_data: {
@@ -13,7 +14,7 @@ const createStripeSession = catchAsync(async function (req, res, next) {
           description: product.description,
           images: [product.image],
         },
-        unit_amount: product.price,
+        unit_amount: product.price * 100,
         currency: "usd",
       },
       quantity: product.amount,
