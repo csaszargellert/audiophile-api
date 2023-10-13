@@ -33,18 +33,6 @@ const handleJwt = function (errorMessage) {
   return new AppError(errorMessage, 403);
 };
 
-const handleMulterError = function (multerError) {
-  switch (multerError.code) {
-    case "LIMIT_UNEXPECTED_FILE":
-      return new AppError(
-        "More files were provided than expected at field: " + multerError.field,
-        400
-      );
-    default:
-      return new AppError("Something went wrong while uploading a file", 400);
-  }
-};
-
 const globalErrorHandler = function (error, req, res, next) {
   const copiedError = JSON.parse(JSON.stringify(error));
   copiedError.message = error.message;
@@ -60,8 +48,6 @@ const globalErrorHandler = function (error, req, res, next) {
     err = handleJwt(copiedError.message);
   } else if (copiedError.name === "JsonWebTokenError") {
     err = handleJwt(copiedError.message);
-  } else if (copiedError.name === "MulterError") {
-    err = handleMulterError(copiedError);
   } else {
     err = copiedError;
   }

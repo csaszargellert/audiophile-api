@@ -1,14 +1,4 @@
 const mongoose = require("mongoose");
-const {
-  constructDirectoryPath,
-  renameDirectory,
-  deleteDirectory,
-  readFilesFromDirectory,
-  copyFile,
-  deleteFilesFromDirectory,
-} = require("../utils/directoryHandler");
-const url = require("url");
-const path = require("path");
 
 const { Schema, model } = mongoose;
 
@@ -76,71 +66,8 @@ ProductSchema.virtual("isNew").get(function () {
   return timeLimitToIsNew >= Date.now();
 });
 
-ProductSchema.virtual("constructedPath").get(function () {
-  const directoryPath = constructDirectoryPath(this.name, this.category);
-  const constructedFilePath = path.join(directoryPath, this.image);
-  const pathURL = url.pathToFileURL(constructedFilePath);
-  return pathURL;
-});
-
 ProductSchema.pre(/(update)/i, async function () {
   this.set("updatedAt", new Date(Date.now()));
-});
-
-ProductSchema.pre(/(update)/i, async function () {
-  const oldProduct = await this.model.findOne(this.getQuery());
-
-  const newName = this.get("name");
-  const newCategory = this.get("category");
-  const newImage = this.get("image");
-  const newGallery = this.get("gallery");
-  const oldName = oldProduct.name;
-  const oldCategory = oldProduct.category;
-
-  const oldDirectoryName = constructDirectoryPath(oldName, oldCategory);
-  const newDirectoryName = constructDirectoryPath(newName, newCategory);
-
-  if (newName !== oldName || newCategory !== oldCategory) {
-    if (!newImage && !newGallery) {
-      await renameDirectory(oldDirectoryName, newDirectoryName);
-    } else {
-      if (!newImage) {
-        const allPictures = await readFilesFromDirectory(oldDirectoryName);
-        const notModifiedImage = allPictures.filter((picture) =>
-          picture.includes("image")
-        );
-        await copyFile(notModifiedImage, oldDirectoryName, newDirectoryName);
-      } else if (!newGallery) {
-        const allPictures = await readFilesFromDirectory(oldDirectoryName);
-        const notModifiedImage = allPictures.filter((picture) =>
-          picture.includes("gallery")
-        );
-        await copyFile(notModifiedImage, oldDirectoryName, newDirectoryName);
-      }
-
-      await deleteDirectory(oldDirectoryName, { recursive: true });
-    }
-  } else {
-    const oldGallery = oldProduct.gallery;
-    const oldImage = oldProduct.image;
-
-    if (newImage && newGallery) {
-      await deleteFilesFromDirectory(oldDirectoryName, [
-        ...newGallery,
-        newImage,
-      ]);
-    } else if (newImage) {
-      await deleteFilesFromDirectory(oldDirectoryName, [
-        ...oldGallery,
-        newImage,
-      ]);
-    } else if (newGallery) {
-      await deleteFilesFromDirectory(oldDirectoryName, [
-        ...newGallery,
-        oldImage,
-      ]);
-    }
-  }
 });
 
 ProductSchema.statics.filterByCategory = async function (category) {
@@ -165,11 +92,6 @@ ProductSchema.statics.filterByCategory = async function (category) {
     })
     .sort({ isNew: -1 });
 };
-
-ProductSchema.post(/(delete)/i, async function (doc) {
-  const directoryPath = constructDirectoryPath(doc.name, doc.category);
-  await deleteDirectory(directoryPath, { recursive: true, force: true });
-});
 
 const Product = model("Product", ProductSchema);
 

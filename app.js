@@ -17,7 +17,8 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-app.use("/assets", express.static(__dirname + "/public"));
+app.use(express.json({ limit: "50mb" }));
+
 app.get(
   "/api/success",
   catchAsync(async (req, res, next) => {
@@ -30,8 +31,6 @@ app.get(
     res.status(200).json({ customer, invoice: session.invoice });
   })
 );
-
-app.use(express.json());
 
 app.get("/api/refresh-token", require("./controllers/refreshTokenController"));
 app.use("/api/auth", require("./routes/authRoutes"));

@@ -1,17 +1,7 @@
 const AppError = require("../utils/AppError");
 const catchAsync = require("../utils/CatchAsync");
 const Product = require("../models/Product");
-
-const getImageFilename = function (files) {
-  if (Object.keys(files).length === 0) return null;
-  if (!files.image) return null;
-  return files?.image[0]?.filename;
-};
-
-const getGalleryFilenames = function (files) {
-  if (Object.keys(files).length === 0) return null;
-  return files?.gallery?.map((fileProps) => fileProps?.filename);
-};
+const { cloudinary } = require("../utils/cloudinary");
 
 const getProducts = catchAsync(async function (req, res, next) {
   const products = await Product.find({}).exec();
@@ -20,19 +10,28 @@ const getProducts = catchAsync(async function (req, res, next) {
 });
 
 const createProduct = catchAsync(async function (req, res, next) {
-  const { name, category, description, price, features } = req.body;
-  const imageFilename = getImageFilename(req.files);
-  const galleryFilenames = getGalleryFilenames(req.files);
+  const { name, category, description, price, features, image, gallery } =
+    req.body;
   const session = req.session;
   const user = req.user;
+
+  const images = [image, ...gallery[0], gallery[1]].map((img) => {
+    return cloudinary.uploader.upload(img);
+  });
+
+  const uploaded = await Promise.all(images);
+
+  const imageToUpload = uploaded.splice(0, 1)[0];
+
+  const galleryToUpload = uploaded.map((img) => img.secure_url);
 
   const newProduct = new Product({
     name,
     category,
     description,
     price,
-    image: imageFilename,
-    gallery: galleryFilenames,
+    image: imageToUpload.secure_url,
+    gallery: galleryToUpload,
     features,
   });
 
@@ -100,10 +99,31 @@ const deleteProduct = catchAsync(async function (req, res, next) {
 
 const updateProduct = catchAsync(async function (req, res, next) {
   const { productId } = req.params;
-  const { name, category, description, price, features } = req.body;
+  const { name, category, description, price, features, image, gallery } =
+    req.body;
 
-  const imageFilename = getImageFilename(req.files);
-  const galleryFilenames = getGalleryFilenames(req.files);
+  let imageToUpload;
+  let galleryToUpload;
+  if (image && gallery) {
+    const images = [image, ...gallery[0], gallery[1]].map((img) => {
+      return cloudinary.uploader.upload(img);
+    });
+
+    const uploaded = await Promise.all(images);
+
+    imageToUpload = uploaded.splice(0, 1)[0];
+    galleryToUpload = uploaded.map((img) => img.secure_url);
+  } else if (image) {
+    imageToUpload = await cloudinary.uploader.upload(image);
+  } else if (gallery) {
+    gallery.map((img) => {
+      return cloudinary.uploader.upload(img);
+    });
+
+    const uploaded = await Promise.all(images);
+
+    galleryToUpload = uploaded.map((img) => img.secure_url);
+  }
 
   const updatedProduct = await Product.findByIdAndUpdate(
     productId,
@@ -113,8 +133,8 @@ const updateProduct = catchAsync(async function (req, res, next) {
       description,
       price,
       features,
-      image: imageFilename ?? undefined,
-      gallery: galleryFilenames ?? undefined,
+      image: imageToUpload?.secure_url,
+      gallery: galleryToUpload,
     },
     { runValidators: true, new: true }
   );
