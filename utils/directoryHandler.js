@@ -11,7 +11,6 @@ const constructDirectoryPath = function (name, category) {
 
   return path.join(
     "https://gellert-audiophile.netlify.app",
-    "public",
     "assets",
     `product-${serializedName}-${category}`
   );
