@@ -17,7 +17,7 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-app.use("assets", express.static(__dirname, "/public"));
+app.use("/assets", express.static(__dirname + "/public"));
 app.get(
   "/api/success",
   catchAsync(async (req, res, next) => {

@@ -11,7 +11,6 @@ const constructDirectoryPath = function (name, category) {
   const url = path.join(
     __dirname,
     "public",
-    "assets",
     `product-${serializedName}-${category}`
   );
   console.log(url);
