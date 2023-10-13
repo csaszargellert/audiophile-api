@@ -8,12 +8,14 @@ const serializeDirectoryName = function (name) {
 
 const constructDirectoryPath = function (name, category) {
   const serializedName = serializeDirectoryName(name);
-
-  return path.join(
-    "https://gellert-audiophile.netlify.app",
+  const url = path.join(
+    __dirname,
+    "public",
     "assets",
     `product-${serializedName}-${category}`
   );
+  console.log(url);
+  return url;
 };
 
 const renameDirectory = async function (oldDirectoryName, newDirectoryName) {
