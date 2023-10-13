@@ -6,7 +6,6 @@ const createStripeSession = catchAsync(async function (req, res, next) {
   const { products } = req.body;
 
   const line_items_products = products.map((product) => {
-    console.log(product.price);
     return {
       price_data: {
         product_data: {
