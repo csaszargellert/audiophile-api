@@ -13,6 +13,7 @@ const constructDirectoryPath = function (name, category) {
     "public",
     `product-${serializedName}-${category}`
   );
+  console.log(__dirname);
   console.log(url);
   return url;
 };
