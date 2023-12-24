@@ -1,11 +1,19 @@
 const AppError = require("../utils/AppError");
+const Comment = require("../models/Comment");
+const User = require("../models/User");
 const catchAsync = require("../utils/CatchAsync");
 const Product = require("../models/Product");
 const { cloudinary } = require("../utils/cloudinary");
 
 const getProducts = catchAsync(async function (req, res, next) {
-  const products = await Product.find({}).exec();
+  const { favorites } = req.query;
 
+  const query = Product.find();
+  if (favorites) {
+    const parsedFavorites = JSON.parse(favorites);
+    query.in("_id", parsedFavorites);
+  }
+  const products = await query.select("image category name createdAt").exec();
   res.status(200).json({ data: products });
 });
 
@@ -56,11 +64,21 @@ const createProduct = catchAsync(async function (req, res, next) {
 const getProduct = catchAsync(async function (req, res, next) {
   const { productId } = req.params;
 
-  const foundProduct = await Product.findById(productId).exec();
+  const foundProduct = await Product.findById(productId)
+    .populate({
+      path: "comments",
+      select: "comment user ratings createdAt",
+      populate: {
+        path: "user",
+        select: "username",
+      },
+    })
+    .exec();
 
   if (!foundProduct) {
     throw new AppError("Product not found", 404);
   }
+
   res.status(200).json({ data: foundProduct });
 });
 
@@ -79,6 +97,17 @@ const deleteProduct = catchAsync(async function (req, res, next) {
     if (!deletedProduct) {
       throw new AppError("Product not found", 404);
     }
+
+    const comments = deletedProduct.comments;
+
+    await Comment.deleteMany({
+      _id: { $in: comments },
+    }).session(session);
+
+    await User.updateMany(
+      { comments: { $in: comments } },
+      { $pull: { comments: { $in: comments } } }
+    ).session(session);
 
     user.productsId = user.productsId.filter(
       (id) => id.toString() !== productId

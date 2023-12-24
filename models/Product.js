@@ -34,13 +34,19 @@ const ProductSchema = new Schema(
     features: {
       type: String,
       trim: true,
-      maxLength: [1000, "Features can be max. 1000 characters"],
+      maxlength: [1000, "Features can be max. 1000 characters"],
     },
     createdAt: {
       type: Date,
       default: Date.now(),
     },
     updatedAt: Date,
+    comments: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: "Comment",
+      },
+    ],
   },
   {
     toJSON: {

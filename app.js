@@ -12,9 +12,7 @@ const AppError = require("./utils/AppError");
 
 const app = express();
 
-app.use(
-  cors({ origin: "https://gellert-audiophile.netlify.app", credentials: true })
-);
+app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json({ limit: "50mb" }));
@@ -35,6 +33,7 @@ app.get(
 app.get("/api/refresh-token", require("./controllers/refreshTokenController"));
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/products", require("./routes/productRoutes"));
+app.use("/api/comments", require("./routes/commentRoutes"));
 app.use("/api/stripe", require("./routes/stripeRoutes"));
 
 app.all("*", (req, res, next) => {

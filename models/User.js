@@ -50,6 +50,12 @@ const UserSchema = new Schema(
         ref: "Product",
       },
     ],
+    comments: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: "Comment",
+      },
+    ],
     refreshToken: String,
   },
   {
