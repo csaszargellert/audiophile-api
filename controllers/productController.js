@@ -3,7 +3,11 @@ const Comment = require("../models/Comment");
 const User = require("../models/User");
 const catchAsync = require("../utils/CatchAsync");
 const Product = require("../models/Product");
-const { cloudinary } = require("../utils/cloudinary");
+const { AwsBucket } = require("../utils/awsBucket");
+
+const getImageKeys = function (fileArray) {
+  return fileArray.map((file) => file.key);
+};
 
 const getProducts = catchAsync(async function (req, res, next) {
   const { favorites } = req.query;
@@ -14,32 +18,27 @@ const getProducts = catchAsync(async function (req, res, next) {
     query.in("_id", parsedFavorites);
   }
   const products = await query.select("image category name createdAt").exec();
+
+  for (const product of products) {
+    product.image = await AwsBucket.createSignedUrl(product.image);
+  }
+
   res.status(200).json({ data: products });
 });
 
 const createProduct = catchAsync(async function (req, res, next) {
-  const { name, category, description, price, features, image, gallery } =
-    req.body;
+  const { name, category, description, price, features } = req.body;
+
   const session = req.session;
   const user = req.user;
-
-  const images = [image, ...gallery[0], gallery[1]].map((img) => {
-    return cloudinary.uploader.upload(img);
-  });
-
-  const uploaded = await Promise.all(images);
-
-  const imageToUpload = uploaded.splice(0, 1)[0];
-
-  const galleryToUpload = uploaded.map((img) => img.secure_url);
 
   const newProduct = new Product({
     name,
     category,
     description,
     price,
-    image: imageToUpload.secure_url,
-    gallery: galleryToUpload,
+    image: getImageKeys(req.files.image)[0],
+    gallery: getImageKeys(req.files.gallery),
     features,
   });
 
@@ -79,6 +78,12 @@ const getProduct = catchAsync(async function (req, res, next) {
     throw new AppError("Product not found", 404);
   }
 
+  foundProduct.image = await AwsBucket.createSignedUrl(foundProduct.image);
+  const galleryPromises = foundProduct.gallery.map((galleryImage) =>
+    AwsBucket.createSignedUrl(galleryImage)
+  );
+  foundProduct.gallery = await Promise.all(galleryPromises);
+
   res.status(200).json({ data: foundProduct });
 });
 
@@ -87,10 +92,25 @@ const deleteProduct = catchAsync(async function (req, res, next) {
   const session = req.session;
   const user = req.user;
 
+  const product = await Product.findById(productId);
+
+  if (!product) {
+    throw new AppError("Product not found", 404);
+  }
+
+  const pictures = [product.image, ...product.gallery].map((picture) =>
+    AwsBucket.deleteFile(picture)
+  );
+  const deletePictures = await Promise.all(pictures);
+
+  if (!deletePictures.every((picture) => picture.DeleteMarker)) {
+    throw new AppError("Image cannot be deleted", 500);
+  }
+
   try {
     await session.startTransaction();
 
-    const deletedProduct = await Product.findByIdAndDelete(productId)
+    const deletedProduct = await Product.deleteOne({ _id: productId })
       .session(session)
       .exec();
 
@@ -128,30 +148,27 @@ const deleteProduct = catchAsync(async function (req, res, next) {
 
 const updateProduct = catchAsync(async function (req, res, next) {
   const { productId } = req.params;
-  const { name, category, description, price, features, image, gallery } =
-    req.body;
+  const { name, category, description, price, features } = req.body;
+  const { image, gallery } = req.files;
 
-  let imageToUpload;
-  let galleryToUpload;
+  const product = await Product.findById(productId);
+
+  if (!product) {
+    throw new AppError("Product not found", 404);
+  }
+
   if (image && gallery) {
-    const images = [image, ...gallery[0], gallery[1]].map((img) => {
-      return cloudinary.uploader.upload(img);
-    });
-
-    const uploaded = await Promise.all(images);
-
-    imageToUpload = uploaded.splice(0, 1)[0];
-    galleryToUpload = uploaded.map((img) => img.secure_url);
+    const imagePromises = [product.image, ...product.gallery].map((picture) =>
+      AwsBucket.deleteFile(picture)
+    );
+    await Promise.all(imagePromises);
   } else if (image) {
-    imageToUpload = await cloudinary.uploader.upload(image);
+    await AwsBucket.deleteFile(product.image);
   } else if (gallery) {
-    gallery.map((img) => {
-      return cloudinary.uploader.upload(img);
-    });
-
-    const uploaded = await Promise.all(images);
-
-    galleryToUpload = uploaded.map((img) => img.secure_url);
+    const imagePromises = product.gallery.map((picture) =>
+      AwsBucket.deleteFile(picture)
+    );
+    await Promise.all(imagePromises);
   }
 
   const updatedProduct = await Product.findByIdAndUpdate(
@@ -162,15 +179,11 @@ const updateProduct = catchAsync(async function (req, res, next) {
       description,
       price,
       features,
-      image: imageToUpload?.secure_url,
-      gallery: galleryToUpload,
+      image: image && getImageKeys(req.files.image)[0],
+      gallery: gallery && getImageKeys(req.files.gallery),
     },
     { runValidators: true, new: true }
   );
-
-  if (!updatedProduct) {
-    throw new AppError("Product not found", 404);
-  }
 
   res.status(201).json({ data: updatedProduct });
 });
@@ -178,6 +191,11 @@ const updateProduct = catchAsync(async function (req, res, next) {
 const getProductsByCategory = catchAsync(async function (req, res, next) {
   const { slug } = req.params;
   const products = await Product.filterByCategory(slug);
+
+  for (const product of products) {
+    product.image = await AwsBucket.createSignedUrl(product.image);
+  }
+
   res.status(200).json({ data: products });
 });
 
