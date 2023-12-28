@@ -27,3 +27,16 @@ jobs:
     - run: npm ci
     - run: npm run build --if-present
     - run: sudo pm2 restart app
+      env:
+        DB_PASSWORD: ${{secrets.DB_PASSWORD}}
+        DB_CONNECTION: ${{secrets.DB_CONNECTION}}
+        DB_USERNAME: ${{secrets.DB_USERNAME}}
+        PORT: ${{secrets.PORT}}
+        JWT_ACCESS_SALT: ${{secrets.JWT_ACCESS_SALT}}
+        JWT_REFRESH_SALT: ${{secrets.JWT_REFRESH_SALT}}
+        STRIPE_KEY: ${{secrets.STRIPE_KEY}}
+        CLIENT_URL: ${{secrets.CLIENT_URL}}
+        AWS_S3_ACCESS_KEY: ${{secrets.AWS_S3_ACCESS_KEY}}
+        AWS_S3_SECRET_KEY: ${{secrets.AWS_S3_SECRET_KEY}}
+        AWS_S3_REGION: ${{secrets.AWS_S3_REGION}}
+        AWS_S3_BUCKET_NAME: ${{secrets.AWS_S3_BUCKET_NAME}}
