@@ -24,11 +24,8 @@ const createStripeSession = catchAsync(async function (req, res, next) {
     line_items: line_items_products,
     mode: "payment",
     success_url:
-      "http://localhost:5173/success?session_id={CHECKOUT_SESSION_ID}",
-    cancel_url: "http://localhost:5173/cancel",
-    // success_url:
-    //   "https://gellert-audiophile.netlify.app/success?session_id={CHECKOUT_SESSION_ID}",
-    // cancel_url: "https://gellert-audiophile.netlify.app/cancel",
+      "https://audiophile-frontendmentor.xyz/success?session_id={CHECKOUT_SESSION_ID}",
+    cancel_url: "https://audiophile-frontendmentor.xyz/cancel",
     customer_email: req.user.email,
     shipping_address_collection: {
       allowed_countries: ["HU"],
